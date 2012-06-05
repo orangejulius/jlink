@@ -1,17 +1,21 @@
+import ConfigParser
 import sqlite3
 from contextlib import closing
 from flask import Flask, request, session, g, redirect, url_for, \
      abort, render_template, flash
 
 # configuration
-DATABASE = '/tmp/flaskr.db'
 DEBUG = True
-SECRET_KEY = 'foobarec2heroku'
-USERNAME = 'admin'
-PASSWORD = 'default'
 
 app = Flask(__name__)
 app.config.from_object(__name__)
+
+config = ConfigParser.RawConfigParser()
+config.read('jlink.cfg')
+app.config['DATABASE'] = config.get('db', 'database')
+app.config['USERNAME'] = config.get('user', 'username')
+app.config['PASSWORD'] = config.get('user', 'password')
+app.config['SECRET_KEY'] = config.get('session', 'secret')
 
 #utility functions
 def connect_db():
