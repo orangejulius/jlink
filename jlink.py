@@ -56,18 +56,8 @@ def add_entry():
 	flash('New entry was successfully posted')
 	return redirect(url_for('show_entries'))
 
-def getRequestToken():
-	print "secret '"+app.config['OAUTH_SECRET_KEY']+"' key: '"+ app.config['OAUTH_CONSUMER_KEY']+"'"
-	consumer = oauth2.Consumer(app.config['OAUTH_CONSUMER_KEY'], app.config['OAUTH_SECRET_KEY'])
-	client = oauth2.Client(consumer)
-	resp, content = client.request(app.config['REQUEST_TOKEN_URL'], 'POST')
-	content = dict(urlparse.parse_qsl(content))
-	print content
-
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-	getRequestToken()
 	error = None
 	if request.method == 'POST':
 		if request.form['username'] != app.config['USERNAME']:
@@ -79,6 +69,17 @@ def login():
 			flash('You were logged in')
 			return redirect(url_for('show_entries'))
 	return render_template('login.html', error=error)
+
+@app.route('/login-linkedin')
+def getRequestToken():
+	print "secret '"+app.config['OAUTH_SECRET_KEY']+"' key: '"+ app.config['OAUTH_CONSUMER_KEY']+"'"
+	consumer = oauth2.Consumer(app.config['OAUTH_CONSUMER_KEY'], app.config['OAUTH_SECRET_KEY'])
+	client = oauth2.Client(consumer)
+	resp, content = client.request(app.config['REQUEST_TOKEN_URL'], 'POST')
+	content = dict(urlparse.parse_qsl(content))
+	print content
+	url = "%s?oauth_token=%s" % (content['xoauth_request_auth_url'], content['oauth_token'])
+	return redirect(url)
 
 @app.route('/logout')
 def logout():
