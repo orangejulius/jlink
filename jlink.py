@@ -1,5 +1,7 @@
 import ConfigParser
+import oauth2
 import sqlite3
+import urlparse
 from contextlib import closing
 from flask import Flask, request, session, g, redirect, url_for, \
      abort, render_template, flash
@@ -16,6 +18,9 @@ app.config['DATABASE'] = config.get('db', 'database')
 app.config['USERNAME'] = config.get('user', 'username')
 app.config['PASSWORD'] = config.get('user', 'password')
 app.config['SECRET_KEY'] = config.get('session', 'secret')
+app.config['OAUTH_CONSUMER_KEY'] = config.get('linkedin', 'consumer_key')
+app.config['OAUTH_SECRET_KEY'] = config.get('linkedin', 'secret_key')
+app.config['REQUEST_TOKEN_URL'] = config.get('linkedin', 'request_token_url')
 
 #utility functions
 def connect_db():
@@ -51,8 +56,18 @@ def add_entry():
 	flash('New entry was successfully posted')
 	return redirect(url_for('show_entries'))
 
+def getRequestToken():
+	print "secret '"+app.config['OAUTH_SECRET_KEY']+"' key: '"+ app.config['OAUTH_CONSUMER_KEY']+"'"
+	consumer = oauth2.Consumer(app.config['OAUTH_CONSUMER_KEY'], app.config['OAUTH_SECRET_KEY'])
+	client = oauth2.Client(consumer)
+	resp, content = client.request(app.config['REQUEST_TOKEN_URL'], 'POST')
+	content = dict(urlparse.parse_qsl(content))
+	print content
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+	getRequestToken()
 	error = None
 	if request.method == 'POST':
 		if request.form['username'] != app.config['USERNAME']:
