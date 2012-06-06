@@ -1,4 +1,4 @@
-import ConfigParser
+import json
 import oauth2
 import sqlite3
 import urlparse
@@ -8,24 +8,16 @@ from flask import Flask, request, session, g, redirect, url_for, \
 
 # configuration
 DEBUG = True
+configFileName = 'config.json'
 
 app = Flask(__name__)
 app.config.from_object(__name__)
 
-config = ConfigParser.RawConfigParser()
-config.read('jlink.cfg')
-app.config['DATABASE'] = config.get('db', 'database')
-app.config['USERNAME'] = config.get('user', 'username')
-app.config['PASSWORD'] = config.get('user', 'password')
-app.config['SECRET_KEY'] = config.get('session', 'secret')
-app.config['OAUTH_CONSUMER_KEY'] = config.get('linkedin', 'consumer_key')
-app.config['OAUTH_SECRET_KEY'] = config.get('linkedin', 'secret_key')
-app.config['REQUEST_TOKEN_URL'] = config.get('linkedin', 'request_token_url')
-app.config['ACCESS_TOKEN_URL'] = config.get('linkedin', 'access_token_url')
+config = json.load(open(configFileName))
 
 #utility functions
 def connect_db():
-	return sqlite3.connect(app.config['DATABASE'])
+	return sqlite3.connect(config['db']['database'])
 
 def init_db():
 	with closing(connect_db()) as db:
@@ -61,9 +53,9 @@ def add_entry():
 def login():
 	error = None
 	if request.method == 'POST':
-		if request.form['username'] != app.config['USERNAME']:
+		if request.form['username'] != config['user']['username']:
 			error = 'Invalid username'
-		elif request.form['password'] != app.config['PASSWORD']:
+		elif request.form['password'] != config['user']['password']:
 			error = 'Invalid password'
 		else:
 			session['logged_in'] = True
@@ -73,9 +65,9 @@ def login():
 
 @app.route('/login-linkedin')
 def getRequestToken():
-	consumer = oauth2.Consumer(app.config['OAUTH_CONSUMER_KEY'], app.config['OAUTH_SECRET_KEY'])
+	consumer = oauth2.Consumer(config['linkedin']['consumer_key'], config['linkedin']['secret_key'])
 	client = oauth2.Client(consumer)
-	resp, content = client.request(app.config['REQUEST_TOKEN_URL'], "GET")
+	resp, content = client.request(config['linkedin']['request_token_url'], "GET")
 	print resp
 	print content
 	content = dict(urlparse.parse_qsl(content))
@@ -92,15 +84,15 @@ def oauthCallback():
 	if request.args.get('oauth_token') != session['oauth_token']:
 		flash("Invalid oauth_token in callback")
 		return redirect(url_for('show_entries'))
-        consumer = oauth2.Consumer(app.config['OAUTH_CONSUMER_KEY'], app.config['OAUTH_SECRET_KEY'])
+        consumer = oauth2.Consumer(config['linkedin']['consumer_key'], config['linkedin']['secret_key'])
 	token = oauth2.Token(session['oauth_token'], session['oauth_token_secret'])
 	token.set_verifier(request.args.get('oauth_verifier'))
 	client = oauth2.Client(consumer, token)
 
 	#get a new token and store it permanently
 	print
-	print "getting new token from "+app.config['ACCESS_TOKEN_URL']
-	resp, content = client.request(app.config['ACCESS_TOKEN_URL'])
+	print "getting new token from "+config['linkedin']['access_token_url']
+	resp, content = client.request(config['linkedin']['access_token_url'])
 	print resp
 	print content
 	content = dict(urlparse.parse_qsl(content))
