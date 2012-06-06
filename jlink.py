@@ -21,6 +21,7 @@ app.config['SECRET_KEY'] = config.get('session', 'secret')
 app.config['OAUTH_CONSUMER_KEY'] = config.get('linkedin', 'consumer_key')
 app.config['OAUTH_SECRET_KEY'] = config.get('linkedin', 'secret_key')
 app.config['REQUEST_TOKEN_URL'] = config.get('linkedin', 'request_token_url')
+app.config['ACCESS_TOKEN_URL'] = config.get('linkedin', 'access_token_url')
 
 #utility functions
 def connect_db():
@@ -72,14 +73,46 @@ def login():
 
 @app.route('/login-linkedin')
 def getRequestToken():
-	print "secret '"+app.config['OAUTH_SECRET_KEY']+"' key: '"+ app.config['OAUTH_CONSUMER_KEY']+"'"
 	consumer = oauth2.Consumer(app.config['OAUTH_CONSUMER_KEY'], app.config['OAUTH_SECRET_KEY'])
 	client = oauth2.Client(consumer)
-	resp, content = client.request(app.config['REQUEST_TOKEN_URL'], 'POST')
-	content = dict(urlparse.parse_qsl(content))
+	resp, content = client.request(app.config['REQUEST_TOKEN_URL'], "GET")
+	print resp
 	print content
+	content = dict(urlparse.parse_qsl(content))
+
+	#store oauth token and secret for later use
+	session['oauth_token'] = content['oauth_token']
+	session['oauth_token_secret'] = content['oauth_token_secret']
 	url = "%s?oauth_token=%s" % (content['xoauth_request_auth_url'], content['oauth_token'])
+	print "redirecting to "+url
 	return redirect(url)
+
+@app.route('/oauth_callback')
+def oauthCallback():
+	if request.args.get('oauth_token') != session['oauth_token']:
+		flash("Invalid oauth_token in callback")
+		return redirect(url_for('show_entries'))
+        consumer = oauth2.Consumer(app.config['OAUTH_CONSUMER_KEY'], app.config['OAUTH_SECRET_KEY'])
+	token = oauth2.Token(session['oauth_token'], session['oauth_token_secret'])
+	token.set_verifier(request.args.get('oauth_verifier'))
+	client = oauth2.Client(consumer, token)
+
+	#get a new token and store it permanently
+	print
+	print "getting new token from "+app.config['ACCESS_TOKEN_URL']
+	resp, content = client.request(app.config['ACCESS_TOKEN_URL'])
+	print resp
+	print content
+	content = dict(urlparse.parse_qsl(content))
+	token = oauth2.Token(content['oauth_token'], content['oauth_token_secret'])
+	client = oauth2.Client(consumer, token)
+
+	#make the actual interesting request
+	requestUrl="https://api.linkedin.com/v1/people/~"
+	print
+	print "making request for data at "+requestUrl
+	print client.request(requestUrl)
+	return redirect(url_for('show_entries'))
 
 @app.route('/logout')
 def logout():
