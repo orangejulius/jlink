@@ -1,0 +1,22 @@
+{
+	"session": {
+		"secret" : "putASecretKeyHere"
+	},
+
+	"linkedin": {
+		"request_token_url" : "https://api.linkedin.com/uas/oauth/requestToken",
+		"access_token_url" :  "https://api.linkedin.com/uas/oauth/accessToken",
+		"authorize_url" :     "https://api.linkedin.com/uas/oauth/authorize",
+		"consumer_key" : "getFromLinkedIn",
+		"secret_key" : "getFromLinkedIn"
+	},
+
+	"db": {
+		"database" : "/tmp/flaskr.db"
+	},
+
+	"user": {
+		"username" : "admin",
+		"password" : "default"
+	}
+}
